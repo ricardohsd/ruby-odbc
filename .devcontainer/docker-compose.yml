@@ -1,0 +1,33 @@
+version: '3.8'
+
+networks:
+  app:
+    driver: bridge
+
+services:
+  mysql:
+    image: bitnami/mysql:8.0.39
+    platform: linux/amd64
+    ports:
+      - 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ruby_odbc
+      MYSQL_DATABASE: mysql_odbc
+      MYSQL_USER: ruby_odbc
+      MYSQL_PASSWORD: ruby_odbc
+      MYSQL_CHARACTER_SET: utf8
+      MYSQL_COLLATE: utf8_general_ci
+    networks:
+      - app
+
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/base:jammy
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+    networks:
+      - app
