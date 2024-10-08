@@ -28,15 +28,19 @@
 
 /* Create weak alias and function declarations. */
 
-#define WEAKFUNC(name) \
-    int __attribute__((weak, alias("__"#name))) name (void); \
-    static int __attribute__((unused)) __ ## name (void) \
-	{ return -1; /* == SQL_ERROR */ }
+#define WEAKFUNC(name)                                                         \
+    int __attribute__((weak, alias("__" #name))) name(void);                   \
+    static int __attribute__((unused)) __##name(void)                          \
+    {                                                                          \
+        return -1; /* == SQL_ERROR */                                          \
+    }
 
-#define WEAKFUNC_BOOL(name) \
-    int __attribute__((weak, alias("__"#name))) name (void); \
-    static int __attribute__((unused)) __ ## name (void) \
-	{ return 0; /* == BOOL/FALSE */ }
+#define WEAKFUNC_BOOL(name)                                                    \
+    int __attribute__((weak, alias("__" #name))) name(void);                   \
+    static int __attribute__((unused)) __##name(void)                          \
+    {                                                                          \
+        return 0; /* == BOOL/FALSE */                                          \
+    }
 
 WEAKFUNC(SQLAllocConnect)
 WEAKFUNC(SQLAllocEnv)
@@ -121,75 +125,86 @@ WEAKFUNC_BOOL(SQLWriteFileDSNW)
 
 /* Library initializer and finalizer. */
 
-static void *lib_odbc = 0;
-static void *lib_odbcinst = 0;
+static void* lib_odbc = 0;
+static void* lib_odbcinst = 0;
 
 #define warn(msg) fputs(msg, stderr)
 
-void
-ruby_odbc_init()
+void ruby_odbc_init()
 {
     int useiodbc = 0;
-    char *dm_name = getenv("RUBY_ODBC_DM");
-    char *inst_name = getenv("RUBY_ODBC_INST");
+    char* dm_name = getenv("RUBY_ODBC_DM");
+    char* inst_name = getenv("RUBY_ODBC_INST");
 
-    if (dm_name) {
-	lib_odbc = dlopen(dm_name, RTLD_NOW | RTLD_GLOBAL);
-	if (!lib_odbc) {
-	    warn("WARNING: $RUBY_ODBC_DM not loaded.\n");
-	} else {
-	    if (inst_name) {
-		lib_odbcinst = dlopen(inst_name, RTLD_NOW | RTLD_GLOBAL);
-	    }
-	    if (!lib_odbcinst) {
-		warn("WARNING: $RUBY_ODBC_INST not loaded.\n");
-	    }
-	    return;
-	}
+    if (dm_name)
+    {
+        lib_odbc = dlopen(dm_name, RTLD_NOW | RTLD_GLOBAL);
+        if (!lib_odbc)
+        {
+            warn("WARNING: $RUBY_ODBC_DM not loaded.\n");
+        }
+        else
+        {
+            if (inst_name)
+            {
+                lib_odbcinst = dlopen(inst_name, RTLD_NOW | RTLD_GLOBAL);
+            }
+            if (!lib_odbcinst)
+            {
+                warn("WARNING: $RUBY_ODBC_INST not loaded.\n");
+            }
+            return;
+        }
     }
     lib_odbc = dlopen("libodbc" DLEXT ".1", RTLD_NOW | RTLD_GLOBAL);
-    if (!lib_odbc) {
-	lib_odbc = dlopen("libodbc" DLEXT, RTLD_NOW | RTLD_GLOBAL);
+    if (!lib_odbc)
+    {
+        lib_odbc = dlopen("libodbc" DLEXT, RTLD_NOW | RTLD_GLOBAL);
     }
-    if (!lib_odbc) {
-	lib_odbc = dlopen("libiodbc" DLEXT ".2", RTLD_NOW | RTLD_GLOBAL);
-	if (!lib_odbc) {
-	    lib_odbc = dlopen("libiodbc" DLEXT, RTLD_NOW | RTLD_GLOBAL);
-	}
-	if (!lib_odbc) {
-	    warn("WARNING: no ODBC driver manager found.\n");
-	    return;
-	}
-	useiodbc = 1;
+    if (!lib_odbc)
+    {
+        lib_odbc = dlopen("libiodbc" DLEXT ".2", RTLD_NOW | RTLD_GLOBAL);
+        if (!lib_odbc)
+        {
+            lib_odbc = dlopen("libiodbc" DLEXT, RTLD_NOW | RTLD_GLOBAL);
+        }
+        if (!lib_odbc)
+        {
+            warn("WARNING: no ODBC driver manager found.\n");
+            return;
+        }
+        useiodbc = 1;
     }
-    lib_odbcinst = dlopen(useiodbc ?
-			  "libiodbcinst" DLEXT ".2" : "libodbcinst" DLEXT ".1",
-			  RTLD_NOW | RTLD_GLOBAL);
-    if (!lib_odbcinst) {
-	lib_odbcinst = dlopen(useiodbc ?
-			      "libiodbcinst" DLEXT : "libodbcinst" DLEXT,
-			      RTLD_NOW | RTLD_GLOBAL);
+    lib_odbcinst =
+        dlopen(useiodbc ? "libiodbcinst" DLEXT ".2" : "libodbcinst" DLEXT ".1",
+               RTLD_NOW | RTLD_GLOBAL);
+    if (!lib_odbcinst)
+    {
+        lib_odbcinst =
+            dlopen(useiodbc ? "libiodbcinst" DLEXT : "libodbcinst" DLEXT,
+                   RTLD_NOW | RTLD_GLOBAL);
     }
-    if (!lib_odbcinst) {
-	warn("WARNING: no ODBC installer library found.\n");
+    if (!lib_odbcinst)
+    {
+        warn("WARNING: no ODBC installer library found.\n");
     }
 }
 
-void
-ruby_odbc_fini()
+void ruby_odbc_fini()
 {
-    if (lib_odbcinst) {
-	dlclose(lib_odbcinst);
-	lib_odbcinst = 0;
+    if (lib_odbcinst)
+    {
+        dlclose(lib_odbcinst);
+        lib_odbcinst = 0;
     }
-    if (lib_odbc) {
-	dlclose(lib_odbc);
-	lib_odbc = 0;
+    if (lib_odbc)
+    {
+        dlclose(lib_odbc);
+        lib_odbc = 0;
     }
 }
 
-int
-ruby_odbc_have_func(char *name, void *addr)
+int ruby_odbc_have_func(char* name, void* addr)
 {
     return name && addr && (dlsym(NULL, name) != addr);
 }

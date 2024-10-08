@@ -17,4 +17,9 @@ Rake::ExtensionTask.new("odbc") do |ext|
   ext.lib_dir = "lib/odbc"
 end
 
-task default: %i[clobber compile spec rubocop]
+desc "Format C code"
+task :clang_format do
+  sh "clang-format -i ext/odbc/*.c"
+end
+
+task default: %i[clobber clang_format compile spec rubocop]
