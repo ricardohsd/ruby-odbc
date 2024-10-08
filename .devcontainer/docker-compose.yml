@@ -12,7 +12,7 @@ services:
       - 3306
     environment:
       MYSQL_ROOT_PASSWORD: ruby_odbc
-      MYSQL_DATABASE: mysql_odbc
+      MYSQL_DATABASE: ruby_odbc
       MYSQL_USER: ruby_odbc
       MYSQL_PASSWORD: ruby_odbc
       MYSQL_CHARACTER_SET: utf8
