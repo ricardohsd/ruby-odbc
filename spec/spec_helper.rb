@@ -12,4 +12,10 @@ RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
+
+  config.before(:all) do
+    @dsn = "mysql"
+    @uid = "ruby_odbc"
+    @pwd = "ruby_odbc"
+  end
 end
