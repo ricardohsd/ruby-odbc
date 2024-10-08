@@ -9186,25 +9186,12 @@ Init_odbc()
 {
     int i;
     const char *modname = "ODBC";
-    ID modid = rb_intern(modname);
-    VALUE v = Qnil;
+#ifdef UNICODE
+	modname = "ODBC_UTF8";
+#endif
 
     rb_require("date");
     rb_cDate = rb_eval_string("Date");
-
-    if (rb_const_defined(rb_cObject, modid)) {
-	v = rb_const_get(rb_cObject, modid);
-	if (TYPE(v) != T_MODULE) {
-	    rb_raise(rb_eTypeError, "%s already defined", modname);
-	}
-    }
-    if (v != Qnil) {
-#ifdef UNICODE
-	modname = "ODBC_UTF8";
-#else
-	modname = "ODBC_NONE";
-#endif
-    }
 
     for (i = 0; i < (int) (sizeof (ids) / sizeof (ids[0])); i++) {
 	*(ids[i].idp) = rb_intern(ids[i].str);
