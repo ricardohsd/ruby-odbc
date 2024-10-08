@@ -10,6 +10,24 @@ The original gem is no longer maintained and has known issues with modern Ruby v
 
 The repo contains a devcontainer setup with MySQL 8 to facilitate development. The development image install and configures the ODBC driver for MySQL.
 
+## Building
+
+```
+bundle install
+rake compile
+```
+
+## Running specs
+
+```
+rake spec
+```
+
+## Links
+- https://github.com/flavorjones/ruby-c-extensions-explained
+- https://silverhammermba.github.io/emberb/c/
+- https://dev.to/juneira/creating-a-gem-using-ruby-c-api-4h5a
+
 ## Disclaimer
 
 This code is based on the original ruby-odbc gem by Christian Werner [http://www.ch-werner.de/rubyodbc](http://www.ch-werner.de/rubyodbc).
