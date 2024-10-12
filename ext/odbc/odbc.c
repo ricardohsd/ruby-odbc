@@ -64,12 +64,6 @@ typedef SQLCHAR SQLTCHAR;
 #define SQLROWSETSIZE SQLULEN
 #endif
 
-#ifdef RUBY_VERSION_MAJOR
-#if (RUBY_VERSION_MAJOR <= 1) && (RUBY_VERSION_MINOR < 9)
-#define TIME_USE_USEC 1
-#endif
-#endif
-
 #if (RUBY_API_VERSION_CODE >= 20500)
 #define FUNCALL_NOARGS(o, m) rb_funcall((o), (m), 0)
 #else
@@ -8394,11 +8388,7 @@ static int bind_one_param(int pnum, VALUE arg, STMT* q, char** msgp, int* outpp)
                     ts->hour = FUNCALL_NOARGS(arg, IDhour);
                     ts->minute = FUNCALL_NOARGS(arg, IDmin);
                     ts->second = FUNCALL_NOARGS(arg, IDsec);
-#ifdef TIME_USE_USEC
-                    ts->fraction = FUNCALL_NOARGS(arg, IDusec) * 1000;
-#else
                     ts->fraction = FUNCALL_NOARGS(arg, IDnsec);
-#endif
                     rlen = 1;
                     vlen = sizeof(TIMESTAMP_STRUCT);
                 }
