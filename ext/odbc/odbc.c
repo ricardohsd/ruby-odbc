@@ -64,12 +64,6 @@ typedef SQLCHAR SQLTCHAR;
 #define SQLROWSETSIZE SQLULEN
 #endif
 
-#if (RUBY_API_VERSION_CODE >= 20500)
-#define FUNCALL_NOARGS(o, m) rb_funcall((o), (m), 0)
-#else
-#define FUNCALL_NOARGS(o, m) rb_funcall((o), (m), 0, NULL)
-#endif
-
 #ifdef HAVE_RUBY_THREAD_H
 #include "ruby/thread.h"
 #endif
@@ -1870,7 +1864,7 @@ static void free_stmt(STMT* q)
     xfree(q);
 }
 
-static void start_gc() { FUNCALL_NOARGS(rb_mGC, IDstart); }
+static void start_gc() { rb_funcall(rb_mGC, IDstart, 0); }
 
 static void mark_dbc(DBC* p)
 {
@@ -2575,7 +2569,7 @@ static VALUE conf_dsn(int argc, VALUE* argv, VALUE self, int op)
     {
         VALUE a, x;
 
-        a = FUNCALL_NOARGS(attr, IDkeys);
+        a = rb_funcall(attr, IDkeys, 0);
         while ((x = rb_ary_shift(a)) != Qnil)
         {
             VALUE v = rb_hash_aref(attr, x);
@@ -3098,7 +3092,7 @@ static VALUE dbc_drvconnect(VALUE self, VALUE drv)
         VALUE d, a, x;
 
         d = rb_str_new2("");
-        a = FUNCALL_NOARGS(rb_iv_get(drv, "@attrs"), IDkeys);
+        a = rb_funcall(rb_iv_get(drv, "@attrs"), IDkeys, 0);
         while ((x = rb_ary_shift(a)) != Qnil)
         {
             VALUE v = rb_hash_aref(rb_iv_get(drv, "@attrs"), x);
@@ -5075,7 +5069,7 @@ static VALUE dbc_transaction(VALUE self)
         return ret;
     }
     ret = rb_ary_entry(a, 1);
-    rb_exc_raise(rb_exc_new3(rb_obj_class(ret), FUNCALL_NOARGS(ret, IDto_s)));
+    rb_exc_raise(rb_exc_new3(rb_obj_class(ret), rb_funcall(ret, IDto_s, 0)));
     return Qnil;
 }
 
@@ -5669,9 +5663,9 @@ static VALUE date_init(int argc, VALUE* argv, VALUE self)
         {
             rb_raise(rb_eArgError, "wrong # arguments");
         }
-        d = FUNCALL_NOARGS(y, IDday);
-        m = FUNCALL_NOARGS(y, IDmonth);
-        y = FUNCALL_NOARGS(y, IDyear);
+        d = rb_funcall(y, IDday, 0);
+        m = rb_funcall(y, IDmonth, 0);
+        y = rb_funcall(y, IDyear, 0);
     }
     else if (rb_obj_is_kind_of(y, rb_cDate) == Qtrue)
     {
@@ -5679,9 +5673,9 @@ static VALUE date_init(int argc, VALUE* argv, VALUE self)
         {
             rb_raise(rb_eArgError, "wrong # arguments");
         }
-        d = FUNCALL_NOARGS(y, IDmday);
-        m = FUNCALL_NOARGS(y, IDmonth);
-        y = FUNCALL_NOARGS(y, IDyear);
+        d = rb_funcall(y, IDmday, 0);
+        m = rb_funcall(y, IDmonth, 0);
+        y = rb_funcall(y, IDyear, 0);
     }
     else if ((argc == 1) && (rb_obj_is_kind_of(y, rb_cString) == Qtrue))
     {
@@ -5909,9 +5903,9 @@ static VALUE time_init(int argc, VALUE* argv, VALUE self)
         {
             rb_raise(rb_eArgError, "wrong # arguments");
         }
-        s = FUNCALL_NOARGS(h, IDsec);
-        m = FUNCALL_NOARGS(h, IDmin);
-        h = FUNCALL_NOARGS(h, IDhour);
+        s = rb_funcall(h, IDsec, 0);
+        m = rb_funcall(h, IDmin, 0);
+        h = rb_funcall(h, IDhour, 0);
     }
     else if ((argc == 1) && (rb_obj_is_kind_of(h, rb_cString) == Qtrue))
     {
@@ -6155,13 +6149,13 @@ static VALUE timestamp_init(int argc, VALUE* argv, VALUE self)
         {
             rb_raise(rb_eArgError, "wrong # arguments");
         }
-        f = FUNCALL_NOARGS(y, IDusec);
-        ss = FUNCALL_NOARGS(y, IDsec);
-        mm = FUNCALL_NOARGS(y, IDmin);
-        hh = FUNCALL_NOARGS(y, IDhour);
-        d = FUNCALL_NOARGS(y, IDday);
-        m = FUNCALL_NOARGS(y, IDmonth);
-        y = FUNCALL_NOARGS(y, IDyear);
+        f = rb_funcall(y, IDusec, 0);
+        ss = rb_funcall(y, IDsec, 0);
+        mm = rb_funcall(y, IDmin, 0);
+        hh = rb_funcall(y, IDhour, 0);
+        d = rb_funcall(y, IDday, 0);
+        m = rb_funcall(y, IDmonth, 0);
+        y = rb_funcall(y, IDyear, 0);
         f = INT2NUM(NUM2INT(f) * 1000);
     }
     else if (rb_obj_is_kind_of(y, rb_cDate) == Qtrue)
@@ -6174,9 +6168,9 @@ static VALUE timestamp_init(int argc, VALUE* argv, VALUE self)
         ss = INT2FIX(0);
         mm = INT2FIX(0);
         hh = INT2FIX(0);
-        d = FUNCALL_NOARGS(y, IDmday);
-        m = FUNCALL_NOARGS(y, IDmonth);
-        y = FUNCALL_NOARGS(y, IDyear);
+        d = rb_funcall(y, IDmday, 0);
+        m = rb_funcall(y, IDmonth, 0);
+        y = rb_funcall(y, IDyear, 0);
     }
     else if ((argc == 1) && (rb_obj_is_kind_of(y, rb_cString) == Qtrue))
     {
@@ -6676,11 +6670,11 @@ static VALUE stmt_param_output_value(int argc, VALUE* argv, VALUE self)
 
                 time = (TIME_STRUCT*)q->paraminfo[vnum].outbuf;
                 frac = rb_float_new(0.0);
-                now = FUNCALL_NOARGS(rb_cTime, IDnow);
+                now = rb_funcall(rb_cTime, IDnow, 0);
                 v = rb_funcall(
                     rb_cTime, (q->dbcp->gmtime == Qtrue) ? IDutc : IDlocal, 7,
-                    FUNCALL_NOARGS(now, IDyear), FUNCALL_NOARGS(now, IDmonth),
-                    FUNCALL_NOARGS(now, IDday), INT2NUM(time->hour),
+                    rb_funcall(now, IDyear, 0), rb_funcall(now, IDmonth, 0),
+                    rb_funcall(now, IDday, 0), INT2NUM(time->hour),
                     INT2NUM(time->minute), INT2NUM(time->second), frac);
             }
             else
@@ -7411,13 +7405,13 @@ static VALUE do_fetch(STMT* q, int mode)
 
                         time = (TIME_STRUCT*)valp;
                         frac = rb_float_new(0.0);
-                        now = FUNCALL_NOARGS(rb_cTime, IDnow);
+                        now = rb_funcall(rb_cTime, IDnow, 0);
                         v = rb_funcall(
                             rb_cTime,
                             (q->dbcp->gmtime == Qtrue) ? IDutc : IDlocal, 7,
-                            FUNCALL_NOARGS(now, IDyear),
-                            FUNCALL_NOARGS(now, IDmonth),
-                            FUNCALL_NOARGS(now, IDday), INT2NUM(time->hour),
+                            rb_funcall(now, IDyear, 0),
+                            rb_funcall(now, IDmonth, 0),
+                            rb_funcall(now, IDday, 0), INT2NUM(time->hour),
                             INT2NUM(time->minute), INT2NUM(time->second), frac);
                     }
                     else
@@ -8340,9 +8334,9 @@ static int bind_one_param(int pnum, VALUE arg, STMT* q, char** msgp, int* outpp)
                     ctype = SQL_C_TIME;
                     time = (TIME_STRUCT*)valp;
                     memset(time, 0, sizeof(TIME_STRUCT));
-                    time->hour = FUNCALL_NOARGS(arg, IDhour);
-                    time->minute = FUNCALL_NOARGS(arg, IDmin);
-                    time->second = FUNCALL_NOARGS(arg, IDsec);
+                    time->hour = rb_funcall(arg, IDhour, 0);
+                    time->minute = rb_funcall(arg, IDmin, 0);
+                    time->second = rb_funcall(arg, IDsec, 0);
                     rlen = 1;
                     vlen = sizeof(TIME_STRUCT);
                 }
@@ -8353,9 +8347,9 @@ static int bind_one_param(int pnum, VALUE arg, STMT* q, char** msgp, int* outpp)
                     ctype = SQL_C_DATE;
                     date = (DATE_STRUCT*)valp;
                     memset(date, 0, sizeof(DATE_STRUCT));
-                    date->year = FUNCALL_NOARGS(arg, IDyear);
-                    date->month = FUNCALL_NOARGS(arg, IDmonth);
-                    date->day = FUNCALL_NOARGS(arg, IDday);
+                    date->year = rb_funcall(arg, IDyear, 0);
+                    date->month = rb_funcall(arg, IDmonth, 0);
+                    date->day = rb_funcall(arg, IDday, 0);
                     rlen = 1;
                     vlen = sizeof(TIMESTAMP_STRUCT);
                 }
@@ -8366,13 +8360,13 @@ static int bind_one_param(int pnum, VALUE arg, STMT* q, char** msgp, int* outpp)
                     ctype = SQL_C_TIMESTAMP;
                     ts = (TIMESTAMP_STRUCT*)valp;
                     memset(ts, 0, sizeof(TIMESTAMP_STRUCT));
-                    ts->year = FUNCALL_NOARGS(arg, IDyear);
-                    ts->month = FUNCALL_NOARGS(arg, IDmonth);
-                    ts->day = FUNCALL_NOARGS(arg, IDday);
-                    ts->hour = FUNCALL_NOARGS(arg, IDhour);
-                    ts->minute = FUNCALL_NOARGS(arg, IDmin);
-                    ts->second = FUNCALL_NOARGS(arg, IDsec);
-                    ts->fraction = FUNCALL_NOARGS(arg, IDnsec);
+                    ts->year = rb_funcall(arg, IDyear, 0);
+                    ts->month = rb_funcall(arg, IDmonth, 0);
+                    ts->day = rb_funcall(arg, IDday, 0);
+                    ts->hour = rb_funcall(arg, IDhour, 0);
+                    ts->minute = rb_funcall(arg, IDmin, 0);
+                    ts->second = rb_funcall(arg, IDsec, 0);
+                    ts->fraction = rb_funcall(arg, IDnsec, 0);
                     rlen = 1;
                     vlen = sizeof(TIMESTAMP_STRUCT);
                 }
@@ -8385,9 +8379,9 @@ static int bind_one_param(int pnum, VALUE arg, STMT* q, char** msgp, int* outpp)
                 ctype = SQL_C_DATE;
                 date = (DATE_STRUCT*)valp;
                 memset(date, 0, sizeof(DATE_STRUCT));
-                date->year = FUNCALL_NOARGS(arg, IDyear);
-                date->month = FUNCALL_NOARGS(arg, IDmonth);
-                date->day = FUNCALL_NOARGS(arg, IDmday);
+                date->year = rb_funcall(arg, IDyear, 0);
+                date->month = rb_funcall(arg, IDmonth, 0);
+                date->day = rb_funcall(arg, IDmday, 0);
                 rlen = 1;
                 vlen = sizeof(DATE_STRUCT);
                 break;
@@ -8990,7 +8984,7 @@ again:
         }
         else
         {
-            VALUE now = FUNCALL_NOARGS(rb_cTime, IDnow);
+            VALUE now = rb_funcall(rb_cTime, IDnow, 0);
 
             y = rb_funcall(rb_cTime, IDyear, 1, now);
             m = rb_funcall(rb_cTime, IDmonth, 1, now);
