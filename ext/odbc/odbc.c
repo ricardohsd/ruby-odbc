@@ -117,12 +117,6 @@ static VALUE rb_encv = Qnil;
 
 #endif /* UNICODE */
 
-#ifdef RB_CVAR_SET_4ARGS
-#define CVAR_SET(x, y, z) rb_cvar_set(x, y, z, 0)
-#else
-#define CVAR_SET(x, y, z) rb_cvar_set(x, y, z)
-#endif
-
 #ifndef STR2CSTR
 #define STR2CSTR(x) StringValueCStr(x)
 #define NO_RB_STR2CSTR 1
@@ -1900,7 +1894,7 @@ static char* set_err(const char* msg, int warn)
 #endif
     a = rb_ary_new2(1);
     rb_ary_push(a, v);
-    CVAR_SET(Cobj, warn ? IDatatinfo : IDataterror, a);
+    rb_cvar_set(Cobj, warn ? IDatatinfo : IDataterror, a);
     return STR2CSTR(v);
 }
 
@@ -1990,7 +1984,7 @@ static char* get_err_or_info(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
             tracemsg(1, fprintf(stderr, "  | %s\n", STR2CSTR(v)););
         }
     }
-    CVAR_SET(Cobj, isinfo ? IDatatinfo : IDataterror, a);
+    rb_cvar_set(Cobj, isinfo ? IDatatinfo : IDataterror, a);
     if (isinfo)
     {
         return NULL;
@@ -2097,7 +2091,7 @@ static char* get_installer_err()
             tracemsg(1, fprintf(stderr, "  | %s\n", STR2CSTR(v)););
         }
     }
-    CVAR_SET(Cobj, IDataterror, a);
+    rb_cvar_set(Cobj, IDataterror, a);
     return (v0 == Qnil) ? NULL : STR2CSTR(v0);
 }
 #endif
@@ -2211,7 +2205,7 @@ static int succeeded_common(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
     }
     else
     {
-        CVAR_SET(Cobj, IDatatinfo, Qnil);
+        rb_cvar_set(Cobj, IDatatinfo, Qnil);
     }
     return 1;
 }
@@ -2231,7 +2225,7 @@ static int succeeded_nodata(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
 
     if (ret == SQL_NO_DATA)
     {
-        CVAR_SET(Cobj, IDatatinfo, Qnil);
+        rb_cvar_set(Cobj, IDatatinfo, Qnil);
         return 1;
     }
     return succeeded_common(henv, hdbc, hstmt, ret, msgp);
@@ -2335,7 +2329,7 @@ static VALUE dbc_raise(VALUE self, VALUE msg)
     v = rb_str_new2(buf);
     a = rb_ary_new2(1);
     rb_ary_push(a, v);
-    CVAR_SET(Cobj, IDataterror, a);
+    rb_cvar_set(Cobj, IDataterror, a);
     rb_raise(Cerror, "%s", buf);
     return Qnil;
 }
@@ -2875,8 +2869,8 @@ static VALUE dbc_warn(VALUE self) { return rb_cvar_get(Cobj, IDatatinfo); }
 
 static VALUE dbc_clrerror(VALUE self)
 {
-    CVAR_SET(Cobj, IDataterror, Qnil);
-    CVAR_SET(Cobj, IDatatinfo, Qnil);
+    rb_cvar_set(Cobj, IDataterror, Qnil);
+    rb_cvar_set(Cobj, IDatatinfo, Qnil);
     return Qnil;
 }
 
