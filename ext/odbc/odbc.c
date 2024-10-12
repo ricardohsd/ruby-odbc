@@ -143,12 +143,6 @@ static VALUE rb_encv = Qnil;
 
 #endif /* UNICODE */
 
-#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
-#define rb_define_alloc_func(cls, func)                                        \
-    rb_define_singleton_method(cls, "new", func, -1)
-#define rb_undefine_alloc_func(cls) rb_undef_method(CLASS_OF(cls), "new")
-#endif
-
 #ifdef RB_CVAR_SET_4ARGS
 #define CVAR_SET(x, y, z) rb_cvar_set(x, y, z, 0)
 #else
@@ -1627,16 +1621,6 @@ static void uc_free(SQLWCHAR* str)
  *----------------------------------------------------------------------
  */
 
-#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
-static VALUE dsn_new(VALUE self)
-{
-    VALUE obj = rb_obj_alloc(Cdsn);
-
-    rb_obj_call_init(obj, 0, NULL);
-    return obj;
-}
-#endif
-
 static VALUE dsn_init(VALUE self)
 {
     rb_iv_set(self, "@name", Qnil);
@@ -1651,16 +1635,6 @@ static VALUE dsn_init(VALUE self)
  *
  *----------------------------------------------------------------------
  */
-
-#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
-static VALUE drv_new(VALUE self)
-{
-    VALUE obj = rb_obj_alloc(Cdrv);
-
-    rb_obj_call_init(obj, 0, NULL);
-    return obj;
-}
-#endif
 
 static VALUE drv_init(VALUE self)
 {
@@ -2196,8 +2170,9 @@ static SQLRETURN tracesql(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
     if (tracing & 1)
     {
         char* ret_str = trace_sql_ret(ret);
-        fprintf(stderr, "SQLCall: %s > %s > HENV=0x%lx, HDBC=0x%lx, HSTMT=0x%lx\n",
-                m, ret_str, (long)henv, (long)hdbc, (long)hstmt);
+        fprintf(stderr,
+                "SQLCall: %s > %s > HENV=0x%lx, HDBC=0x%lx, HSTMT=0x%lx\n", m,
+                ret_str, (long)henv, (long)hdbc, (long)hstmt);
     }
     return ret;
 }
@@ -2940,7 +2915,6 @@ static VALUE dbc_clrerror(VALUE self)
  *----------------------------------------------------------------------
  */
 
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
 static VALUE dbc_alloc(VALUE self)
 {
     DBC* p;
@@ -2955,9 +2929,10 @@ static VALUE dbc_alloc(VALUE self)
     p->hdbc = SQL_NULL_HDBC;
     p->rbtime = Qfalse;
     p->gmtime = Qfalse;
+    p->upc = 0; // don't upcase column names
+    p->use_sql_column_name = Qfalse;
     return obj;
 }
-#endif
 
 static VALUE dbc_new(int argc, VALUE* argv, VALUE self)
 {
@@ -2977,22 +2952,12 @@ static VALUE dbc_new(int argc, VALUE* argv, VALUE self)
         env = env_of(self);
         self = Cdbc;
     }
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
+
     obj = rb_obj_alloc(Cdbc);
     Data_Get_Struct(obj, DBC, p);
     p->env = env;
-#else
-    obj = Data_Make_Struct(self, DBC, mark_dbc, free_dbc, p);
-    tracemsg(2, fprintf(stderr, "ObjAlloc: DBC %p\n", p););
-    list_init(&p->link, offsetof(DBC, link));
-    p->self = obj;
-    p->env = env;
-    p->envp = NULL;
-    list_init(&p->stmts, offsetof(STMT, link));
-    p->hdbc = SQL_NULL_HDBC;
-    p->upc = 0;
-    p->use_sql_column_name = Qfalse;
-#endif
+    tracemsg(2, fprintf(stderr, "ObjAlloc _new: DBC %p\n", p););
+
     if (env != Qnil)
     {
         ENV* e;
@@ -5632,7 +5597,6 @@ next:
  *----------------------------------------------------------------------
  */
 
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
 static VALUE date_alloc(VALUE self)
 {
     DATE_STRUCT* date;
@@ -5641,7 +5605,7 @@ static VALUE date_alloc(VALUE self)
     memset(date, 0, sizeof(*date));
     return obj;
 }
-#else
+
 static VALUE date_new(int argc, VALUE* argv, VALUE self)
 {
     DATE_STRUCT* date;
@@ -5650,7 +5614,6 @@ static VALUE date_new(int argc, VALUE* argv, VALUE self)
     rb_obj_call_init(obj, argc, argv);
     return obj;
 }
-#endif
 
 static VALUE date_load1(VALUE self, VALUE str, int load)
 {
@@ -5757,7 +5720,6 @@ static VALUE date_init(int argc, VALUE* argv, VALUE self)
 
 static VALUE date_clone(VALUE self)
 {
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
     VALUE obj = rb_obj_alloc(CLASS_OF(self));
     DATE_STRUCT *date1, *date2;
 
@@ -5765,9 +5727,6 @@ static VALUE date_clone(VALUE self)
     Data_Get_Struct(obj, DATE_STRUCT, date2);
     *date2 = *date1;
     return obj;
-#else
-    return date_new(1, &self, CLASS_OF(self));
-#endif
 }
 
 static VALUE date_to_s(VALUE self)
@@ -5878,7 +5837,6 @@ static VALUE date_cmp(VALUE self, VALUE date)
  *----------------------------------------------------------------------
  */
 
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
 static VALUE time_alloc(VALUE self)
 {
     TIME_STRUCT* time;
@@ -5887,7 +5845,7 @@ static VALUE time_alloc(VALUE self)
     memset(time, 0, sizeof(*time));
     return obj;
 }
-#else
+
 static VALUE time_new(int argc, VALUE* argv, VALUE self)
 {
     TIME_STRUCT* time;
@@ -5896,7 +5854,6 @@ static VALUE time_new(int argc, VALUE* argv, VALUE self)
     rb_obj_call_init(obj, argc, argv);
     return obj;
 }
-#endif
 
 static VALUE time_load1(VALUE self, VALUE str, int load)
 {
@@ -5993,7 +5950,6 @@ static VALUE time_init(int argc, VALUE* argv, VALUE self)
 
 static VALUE time_clone(VALUE self)
 {
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
     VALUE obj = rb_obj_alloc(CLASS_OF(self));
     TIME_STRUCT *time1, *time2;
 
@@ -6001,9 +5957,6 @@ static VALUE time_clone(VALUE self)
     Data_Get_Struct(obj, TIME_STRUCT, time2);
     *time2 = *time1;
     return obj;
-#else
-    return time_new(1, &self, CLASS_OF(self));
-#endif
 }
 
 static VALUE time_to_s(VALUE self)
@@ -6114,7 +6067,6 @@ static VALUE time_cmp(VALUE self, VALUE time)
  *----------------------------------------------------------------------
  */
 
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
 static VALUE timestamp_alloc(VALUE self)
 {
     TIMESTAMP_STRUCT* ts;
@@ -6123,7 +6075,7 @@ static VALUE timestamp_alloc(VALUE self)
     memset(ts, 0, sizeof(*ts));
     return obj;
 }
-#else
+
 static VALUE timestamp_new(int argc, VALUE* argv, VALUE self)
 {
     TIMESTAMP_STRUCT* ts;
@@ -6132,7 +6084,6 @@ static VALUE timestamp_new(int argc, VALUE* argv, VALUE self)
     rb_obj_call_init(obj, argc, argv);
     return obj;
 }
-#endif
 
 static VALUE timestamp_load1(VALUE self, VALUE str, int load)
 {
@@ -6268,7 +6219,6 @@ static VALUE timestamp_init(int argc, VALUE* argv, VALUE self)
 
 static VALUE timestamp_clone(VALUE self)
 {
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
     VALUE obj = rb_obj_alloc(CLASS_OF(self));
     TIMESTAMP_STRUCT *ts1, *ts2;
 
@@ -6276,9 +6226,6 @@ static VALUE timestamp_clone(VALUE self)
     Data_Get_Struct(obj, TIMESTAMP_STRUCT, ts2);
     *ts2 = *ts1;
     return obj;
-#else
-    return timestamp_new(1, &self, CLASS_OF(self));
-#endif
 }
 
 static VALUE timestamp_to_s(VALUE self)
@@ -9496,10 +9443,12 @@ Init_odbc()
     rb_attr(Cparam, IDoutput_type, 1, 0, Qfalse);
 
     Cdsn = rb_define_class_under(Modbc, "DSN", Cobj);
+    rb_define_method(Cdsn, "initialize", dsn_init, 0);
     rb_attr(Cdsn, IDname, 1, 1, Qfalse);
     rb_attr(Cdsn, IDdescr, 1, 1, Qfalse);
 
     Cdrv = rb_define_class_under(Modbc, "Driver", Cobj);
+    rb_define_method(Cdrv, "initialize", drv_init, 0);
     rb_attr(Cdrv, IDname, 1, 1, Qfalse);
     rb_attr(Cdrv, IDattrs, 1, 1, Qfalse);
 
@@ -9539,15 +9488,7 @@ Init_odbc()
     rb_define_singleton_method(Cobj, "raise", dbc_raise, 1);
     rb_define_alloc_func(Cenv, env_new);
     rb_define_singleton_method(Cenv, "connect", dbc_new, -1);
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
-    rb_define_alloc_func(Cdbc, dbc_alloc);
-#else
-    rb_define_alloc_func(Cdbc, dbc_new);
-    rb_define_alloc_func(Cdsn, dsn_new);
-    rb_define_alloc_func(Cdrv, drv_new);
-#endif
-    rb_define_method(Cdsn, "initialize", dsn_init, 0);
-    rb_define_method(Cdrv, "initialize", drv_init, 0);
+
     rb_define_method(Cdbc, "newstmt", stmt_new, 0);
 
     /* common (Cobj) methods */
@@ -9577,6 +9518,7 @@ Init_odbc()
     rb_define_module_function(Modbc, "read_file_dsn", dbc_rfdsn, -1);
 
     /* connection (database) methods */
+    rb_define_alloc_func(Cdbc, dbc_alloc);
     rb_define_method(Cdbc, "initialize", dbc_connect, -1);
     rb_define_method(Cdbc, "connect", dbc_connect, -1);
     rb_define_method(Cdbc, "connected?", dbc_connected, 0);
@@ -9684,11 +9626,8 @@ Init_odbc()
     rb_define_method(Cstmt, "rowsetsize", stmt_rowsetsize, -1);
 
     /* data type methods */
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
     rb_define_alloc_func(Cdate, date_alloc);
-#else
     rb_define_singleton_method(Cdate, "new", date_new, -1);
-#endif
     rb_define_singleton_method(Cdate, "_load", date_load, 1);
     rb_define_method(Cdate, "initialize", date_init, -1);
     rb_define_method(Cdate, "clone", date_clone, 0);
@@ -9703,11 +9642,8 @@ Init_odbc()
     rb_define_method(Cdate, "day=", date_day, -1);
     rb_define_method(Cdate, "<=>", date_cmp, 1);
 
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
     rb_define_alloc_func(Ctime, time_alloc);
-#else
     rb_define_singleton_method(Ctime, "new", time_new, -1);
-#endif
     rb_define_singleton_method(Ctime, "_load", time_load, 1);
     rb_define_method(Ctime, "initialize", time_init, -1);
     rb_define_method(Ctime, "clone", time_clone, 0);
@@ -9722,11 +9658,8 @@ Init_odbc()
     rb_define_method(Ctime, "second=", time_sec, -1);
     rb_define_method(Ctime, "<=>", time_cmp, 1);
 
-#ifdef HAVE_RB_DEFINE_ALLOC_FUNC
     rb_define_alloc_func(Ctimestamp, timestamp_alloc);
-#else
     rb_define_singleton_method(Ctimestamp, "new", timestamp_new, -1);
-#endif
     rb_define_singleton_method(Ctimestamp, "_load", timestamp_load, 1);
     rb_define_method(Ctimestamp, "initialize", timestamp_init, -1);
     rb_define_method(Ctimestamp, "clone", timestamp_clone, 0);
@@ -9755,10 +9688,6 @@ Init_odbc()
     rb_define_method(Cproc, "[]", stmt_proc_call, -1);
     rb_attr(Cproc, IDstatement, 1, 0, Qfalse);
     rb_attr(Cproc, IDreturn_output_param, 1, 0, Qfalse);
-#ifndef HAVE_RB_DEFINE_ALLOC_FUNC
-    rb_enable_super(Cproc, "call");
-    rb_enable_super(Cproc, "[]");
-#endif
 
     /* constants */
     for (i = 0; o_const[i].name != NULL; i++)
