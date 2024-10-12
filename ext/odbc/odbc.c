@@ -2160,7 +2160,7 @@ static char* get_err(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt)
 }
 
 #ifdef TRACING
-static void trace_sql_ret(SQLRETURN ret)
+static char* trace_sql_ret(SQLRETURN ret)
 {
     char msg[32];
     const char* p;
@@ -2187,7 +2187,7 @@ static void trace_sql_ret(SQLRETURN ret)
             p = msg;
             break;
     }
-    fprintf(stderr, "  < %s\n", p);
+    return p;
 }
 
 static SQLRETURN tracesql(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
@@ -2195,10 +2195,9 @@ static SQLRETURN tracesql(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
 {
     if (tracing & 1)
     {
-        fprintf(stderr, "SQLCall: %s", m);
-        fprintf(stderr, "\n  > HENV=0x%lx, HDBC=0x%lx, HSTMT=0x%lx\n",
-                (long)henv, (long)hdbc, (long)hstmt);
-        trace_sql_ret(ret);
+        char* ret_str = trace_sql_ret(ret);
+        fprintf(stderr, "SQLCall: %s > %s > HENV=0x%lx, HDBC=0x%lx, HSTMT=0x%lx\n",
+                m, ret_str, (long)henv, (long)hdbc, (long)hstmt);
     }
     return ret;
 }
@@ -2271,40 +2270,16 @@ static int succeeded_common(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
 static int succeeded(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt, SQLRETURN ret,
                      char** msgp, const char* m, ...)
 {
-#ifdef TRACING
-    va_list args;
+    tracesql(henv, hdbc, hstmt, ret, m);
 
-    if (tracing & 1)
-    {
-        va_start(args, m);
-        fprintf(stderr, "SQLCall: ");
-        vfprintf(stderr, m, args);
-        va_end(args);
-        fprintf(stderr, "\n  > HENV=0x%lx, HDBC=0x%lx, HSTMT=0x%lx\n",
-                (long)henv, (long)hdbc, (long)hstmt);
-        trace_sql_ret(ret);
-    }
-#endif
     return succeeded_common(henv, hdbc, hstmt, ret, msgp);
 }
 
 static int succeeded_nodata(SQLHENV henv, SQLHDBC hdbc, SQLHSTMT hstmt,
                             SQLRETURN ret, char** msgp, const char* m, ...)
 {
-#ifdef TRACING
-    va_list args;
+    tracesql(henv, hdbc, hstmt, ret, m);
 
-    if (tracing & 1)
-    {
-        va_start(args, m);
-        fprintf(stderr, "SQLCall: ");
-        vfprintf(stderr, m, args);
-        va_end(args);
-        fprintf(stderr, "\n  > HENV=0x%lx, HDBC=0x%lx, HSTMT=0x%lx\n",
-                (long)henv, (long)hdbc, (long)hstmt);
-        trace_sql_ret(ret);
-    }
-#endif
     if (ret == SQL_NO_DATA)
     {
         CVAR_SET(Cobj, IDatatinfo, Qnil);

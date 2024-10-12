@@ -17,7 +17,9 @@ def have_library_ex(lib, func="main", headers=nil)
     end
   end
 end
- 
+
+$CPPFLAGS+=" -DTRACING"
+
 dir_config("odbc")
 have_header("version.h")
 have_header("ruby/version.h")
