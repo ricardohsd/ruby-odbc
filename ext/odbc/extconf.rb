@@ -20,6 +20,10 @@ end
 
 $CPPFLAGS+=" -DTRACING"
 
+# g3 allows seeing defined macros in the .so file
+# https://www.rapidtables.com/code/linux/gcc/gcc-g.html
+$CFLAGS="-g3 -ggdb"
+
 dir_config("odbc")
 have_header("version.h")
 have_header("ruby/version.h")
