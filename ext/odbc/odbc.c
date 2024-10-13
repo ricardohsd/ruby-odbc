@@ -371,6 +371,13 @@ static const char* colnamebuf[] = {"@_c0", "@_c1", "@_c2", "@_c3"};
  *----------------------------------------------------------------------
  */
 
+/*
+ * TODO: It seems this can be removed.
+ * It was once a thing on Ruby 2.0 but it has been since deprecated.
+ *
+ * https://github.com/ruby/ruby/blob/98fce00cab460be81cb1f5e4cf8c0d66e006a35b/include/ruby/thread.h#L187-L191
+ * https://github.com/ruby/ruby/commit/9ee34b15e415446093039f620a5986dd3426f552#diff-161b2a279f4c67a1ab075a7890ecf6f3f1d483d910910fa52b3715e25cfdcbd7R1095
+ */
 #ifdef RUBY_CALL_WO_GVL_FLAG_SKIP_CHECK_INTS_
 
 static void empty_ubf(void* args) {}
@@ -4302,6 +4309,7 @@ static VALUE wrap_stmt(VALUE dbc, DBC* p, SQLHSTMT hstmt, STMT** qp)
     {
         rb_iv_set(q->self, colnamebuf[i], rb_hash_new());
     }
+
     if (hstmt != SQL_NULL_HSTMT)
     {
         link_stmt(q, p);
@@ -4310,6 +4318,7 @@ static VALUE wrap_stmt(VALUE dbc, DBC* p, SQLHSTMT hstmt, STMT** qp)
     {
         q->dbc = Qnil;
     }
+
     if (qp != NULL)
     {
         *qp = q;
