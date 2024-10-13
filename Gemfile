@@ -12,3 +12,7 @@ gem "rake-compiler"
 gem "rspec", "~> 3.0"
 
 gem "rubocop", "~> 1.21"
+
+group :development, :test do
+  gem "sequel", "~> 5.85", require: false
+end
