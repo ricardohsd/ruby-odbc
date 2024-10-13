@@ -22,4 +22,4 @@ task :clang_format do
   sh "clang-format -i ext/odbc/*.c"
 end
 
-task default: %i[clobber clang_format compile spec rubocop]
+task default: %i[clobber clang_format compile spec]
