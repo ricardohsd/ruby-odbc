@@ -366,907 +366,6 @@ static const char* colnamebuf[] = {"@_c0", "@_c1", "@_c2", "@_c3"};
 /*
  *----------------------------------------------------------------------
  *
- *	Wrappers for long running SQL APIs with GVL released.
- *
- *----------------------------------------------------------------------
- */
-
-/*
- * TODO: It seems this can be removed.
- * It was once a thing on Ruby 2.0 but it has been since deprecated.
- *
- * https://github.com/ruby/ruby/blob/98fce00cab460be81cb1f5e4cf8c0d66e006a35b/include/ruby/thread.h#L187-L191
- * https://github.com/ruby/ruby/commit/9ee34b15e415446093039f620a5986dd3426f552#diff-161b2a279f4c67a1ab075a7890ecf6f3f1d483d910910fa52b3715e25cfdcbd7R1095
- */
-#ifdef RUBY_CALL_WO_GVL_FLAG_SKIP_CHECK_INTS_
-
-static void empty_ubf(void* args) {}
-
-struct S_SQLCONNECT
-{
-    SQLHDBC hdbc;
-    SQLTCHAR* dsn;
-    SQLSMALLINT dsn_len;
-    SQLTCHAR* usr;
-    SQLSMALLINT usr_len;
-    SQLTCHAR* pwd;
-    SQLSMALLINT pwd_len;
-};
-
-static void* F_SQLCONNECT(void* args)
-{
-    size_t ret;
-    struct S_SQLCONNECT* argp = (struct S_SQLCONNECT*)args;
-
-    ret = SQLConnect(argp->hdbc, argp->dsn, argp->dsn_len, argp->usr,
-                     argp->usr_len, argp->pwd, argp->pwd_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLCONNECT(SQLHDBC hdbc, SQLTCHAR* dsn,
-                                   SQLSMALLINT dsn_len, SQLTCHAR* usr,
-                                   SQLSMALLINT usr_len, SQLTCHAR* pwd,
-                                   SQLSMALLINT pwd_len)
-{
-    size_t ret;
-    struct S_SQLCONNECT arg;
-
-    arg.hdbc = hdbc;
-    arg.dsn = dsn;
-    arg.dsn_len = dsn_len;
-    arg.usr = usr;
-    arg.usr_len = usr_len;
-    arg.pwd = pwd;
-    arg.pwd_len = pwd_len;
-    ret =
-        (size_t)rb_thread_call_without_gvl(F_SQLCONNECT, &arg, empty_ubf, &arg);
-    return ret;
-}
-
-struct S_SQLDRIVERCONNECT
-{
-    SQLHDBC hdbc;
-    SQLHWND hwnd;
-    SQLTCHAR* connin;
-    SQLSMALLINT connin_len;
-    SQLTCHAR* connout;
-    SQLSMALLINT connout_max;
-    SQLSMALLINT* connout_len;
-    SQLUSMALLINT compl ;
-};
-
-static void* F_SQLDRIVERCONNECT(void* args)
-{
-    size_t ret;
-    struct S_SQLDRIVERCONNECT* argp = (struct S_SQLDRIVERCONNECT*)args;
-
-    ret = SQLDriverConnect(argp->hdbc, argp->hwnd, argp->connin,
-                           argp->connin_len, argp->connout, argp->connout_max,
-                           argp->connout_len, argp->compl );
-    return (void*)ret;
-}
-
-static inline SQLRETURN
-SQLDRIVERCONNECT(SQLHDBC hdbc, SQLHWND hwnd, SQLTCHAR* connin,
-                 SQLSMALLINT connin_len, SQLTCHAR* connout,
-                 SQLSMALLINT connout_max, SQLSMALLINT* connout_len,
-                 SQLUSMALLINT compl )
-{
-    size_t ret;
-    struct S_SQLDRIVERCONNECT arg;
-
-    arg.hdbc = hdbc;
-    arg.hwnd = hwnd;
-    arg.connin = connin;
-    arg.connin_len = connin_len;
-    arg.connout = connout;
-    arg.connout_max = connout_max;
-    arg.connout_len = connout_len;
-    arg.compl = compl ;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLDRIVERCONNECT, &arg,
-                                             empty_ubf, &arg);
-    return ret;
-}
-
-struct S_SQLDISCONNECT
-{
-    SQLHSTMT hstmt;
-};
-
-static void* F_SQLDISCONNECT(void* args)
-{
-    size_t ret;
-    struct S_SQLDISCONNECT* argp = (struct S_SQLDISCONNECT*)args;
-
-    ret = SQLDisconnect(argp->hstmt);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLDISCONNECT(SQLHSTMT hstmt)
-{
-    size_t ret;
-    struct S_SQLDISCONNECT arg;
-
-    arg.hstmt = hstmt;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLDISCONNECT, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-struct S_SQLTABLES
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* tbl;
-    SQLSMALLINT tbl_len;
-    SQLTCHAR* typ;
-    SQLSMALLINT typ_len;
-};
-
-static void* F_SQLTABLES(void* args)
-{
-    size_t ret;
-    struct S_SQLTABLES* argp = (struct S_SQLTABLES*)args;
-
-    ret = SQLTables(argp->hdbc, argp->cat, argp->cat_len, argp->sch,
-                    argp->sch_len, argp->tbl, argp->tbl_len, argp->typ,
-                    argp->typ_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLTABLES(SQLHDBC hdbc, SQLTCHAR* cat,
-                                  SQLSMALLINT cat_len, SQLTCHAR* sch,
-                                  SQLSMALLINT sch_len, SQLTCHAR* tbl,
-                                  SQLSMALLINT tbl_len, SQLTCHAR* typ,
-                                  SQLSMALLINT typ_len)
-{
-    size_t ret;
-    struct S_SQLTABLES arg;
-
-    arg.hdbc = hdbc;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.tbl = tbl;
-    arg.tbl_len = tbl_len;
-    arg.typ = typ;
-    arg.typ_len = typ_len;
-    ret =
-        (size_t)rb_thread_call_without_gvl(F_SQLTABLES, &arg, empty_ubf, &arg);
-    return ret;
-}
-
-struct S_SQLCOLUMNS
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* tbl;
-    SQLSMALLINT tbl_len;
-    SQLTCHAR* col;
-    SQLSMALLINT col_len;
-};
-
-static void* F_SQLCOLUMNS(void* args)
-{
-    size_t ret;
-    struct S_SQLCOLUMNS* argp = (struct S_SQLCOLUMNS*)args;
-
-    ret = SQLColumns(argp->hdbc, argp->cat, argp->cat_len, argp->sch,
-                     argp->sch_len, argp->tbl, argp->tbl_len, argp->col,
-                     argp->col_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLCOLUMNS(SQLHDBC hdbc, SQLTCHAR* cat,
-                                   SQLSMALLINT cat_len, SQLTCHAR* sch,
-                                   SQLSMALLINT sch_len, SQLTCHAR* tbl,
-                                   SQLSMALLINT tbl_len, SQLTCHAR* col,
-                                   SQLSMALLINT col_len)
-{
-    size_t ret;
-    struct S_SQLCOLUMNS arg;
-
-    arg.hdbc = hdbc;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.tbl = tbl;
-    arg.tbl_len = tbl_len;
-    arg.col = col;
-    arg.col_len = col_len;
-    ret =
-        (size_t)rb_thread_call_without_gvl(F_SQLCOLUMNS, &arg, empty_ubf, &arg);
-    return ret;
-}
-
-struct S_SQLPRIMARYKEYS
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* tbl;
-    SQLSMALLINT tbl_len;
-};
-
-static void* F_SQLPRIMARYKEYS(void* args)
-{
-    size_t ret;
-    struct S_SQLPRIMARYKEYS* argp = (struct S_SQLPRIMARYKEYS*)args;
-
-    ret = SQLPrimaryKeys(argp->hdbc, argp->cat, argp->cat_len, argp->sch,
-                         argp->sch_len, argp->tbl, argp->tbl_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLPRIMARYKEYS(SQLHDBC hdbc, SQLTCHAR* cat,
-                                       SQLSMALLINT cat_len, SQLTCHAR* sch,
-                                       SQLSMALLINT sch_len, SQLTCHAR* tbl,
-                                       SQLSMALLINT tbl_len)
-{
-    size_t ret;
-    struct S_SQLPRIMARYKEYS arg;
-
-    arg.hdbc = hdbc;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.tbl = tbl;
-    arg.tbl_len = tbl_len;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLPRIMARYKEYS, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-struct S_SQLFOREIGNKEYS
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* pkcat;
-    SQLSMALLINT pkcat_len;
-    SQLTCHAR* pksch;
-    SQLSMALLINT pksch_len;
-    SQLTCHAR* pktbl;
-    SQLSMALLINT pktbl_len;
-    SQLTCHAR* fkcat;
-    SQLSMALLINT fkcat_len;
-    SQLTCHAR* fksch;
-    SQLSMALLINT fksch_len;
-    SQLTCHAR* fktbl;
-    SQLSMALLINT fktbl_len;
-};
-
-static void* F_SQLFOREIGNKEYS(void* args)
-{
-    size_t ret;
-    struct S_SQLFOREIGNKEYS* argp = (struct S_SQLFOREIGNKEYS*)args;
-
-    ret = SQLForeignKeys(argp->hdbc, argp->pkcat, argp->pkcat_len, argp->pksch,
-                         argp->pksch_len, argp->pktbl, argp->pktbl_len,
-                         argp->fkcat, argp->fkcat_len, argp->fksch,
-                         argp->fksch_len, argp->fktbl, argp->fktbl_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLFOREIGNKEYS(SQLHDBC hdbc, SQLTCHAR* pkcat,
-                                       SQLSMALLINT pkcat_len, SQLTCHAR* pksch,
-                                       SQLSMALLINT pksch_len, SQLTCHAR* pktbl,
-                                       SQLSMALLINT pktbl_len, SQLTCHAR* fkcat,
-                                       SQLSMALLINT fkcat_len, SQLTCHAR* fksch,
-                                       SQLSMALLINT fksch_len, SQLTCHAR* fktbl,
-                                       SQLSMALLINT fktbl_len)
-{
-    size_t ret;
-    struct S_SQLFOREIGNKEYS arg;
-
-    arg.hdbc = hdbc;
-    arg.pkcat = pkcat;
-    arg.pkcat_len = pkcat_len;
-    arg.pksch = pksch;
-    arg.pksch_len = pksch_len;
-    arg.pktbl = pktbl;
-    arg.pktbl_len = pktbl_len;
-    arg.fkcat = fkcat;
-    arg.fkcat_len = fkcat_len;
-    arg.fksch = fksch;
-    arg.fksch_len = fksch_len;
-    arg.fktbl = fktbl;
-    arg.fktbl_len = fktbl_len;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLFOREIGNKEYS, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-struct S_SQLPROCEDURES
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* prc;
-    SQLSMALLINT prc_len;
-};
-
-static void* F_SQLPROCEDURES(void* args)
-{
-    size_t ret;
-    struct S_SQLPROCEDURES* argp = (struct S_SQLPROCEDURES*)args;
-
-    ret = SQLProcedures(argp->hdbc, argp->cat, argp->cat_len, argp->sch,
-                        argp->sch_len, argp->prc, argp->prc_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLPROCEDURES(SQLHDBC hdbc, SQLTCHAR* cat,
-                                      SQLSMALLINT cat_len, SQLTCHAR* sch,
-                                      SQLSMALLINT sch_len, SQLTCHAR* prc,
-                                      SQLSMALLINT prc_len)
-{
-    size_t ret;
-    struct S_SQLPROCEDURES arg;
-
-    arg.hdbc = hdbc;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.prc = prc;
-    arg.prc_len = prc_len;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLPROCEDURES, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-struct S_SQLPROCEDURECOLUMNS
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* prc;
-    SQLSMALLINT prc_len;
-    SQLTCHAR* col;
-    SQLSMALLINT col_len;
-};
-
-static void* F_SQLPROCEDURECOLUMNS(void* args)
-{
-    size_t ret;
-    struct S_SQLPROCEDURECOLUMNS* argp = (struct S_SQLPROCEDURECOLUMNS*)args;
-
-    ret = SQLProcedureColumns(argp->hdbc, argp->cat, argp->cat_len, argp->sch,
-                              argp->sch_len, argp->prc, argp->prc_len,
-                              argp->col, argp->col_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLPROCEDURECOLUMNS(SQLHDBC hdbc, SQLTCHAR* cat,
-                                            SQLSMALLINT cat_len, SQLTCHAR* sch,
-                                            SQLSMALLINT sch_len, SQLTCHAR* prc,
-                                            SQLSMALLINT prc_len, SQLTCHAR* col,
-                                            SQLSMALLINT col_len)
-{
-    size_t ret;
-    struct S_SQLPROCEDURECOLUMNS arg;
-
-    arg.hdbc = hdbc;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.prc = prc;
-    arg.prc_len = prc_len;
-    arg.col = col;
-    arg.col_len = col_len;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLPROCEDURECOLUMNS, &arg,
-                                             empty_ubf, &arg);
-    return ret;
-}
-
-struct S_SQLTABLEPRIVILEGES
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* tbl;
-    SQLSMALLINT tbl_len;
-};
-
-static void* F_SQLTABLEPRIVILEGES(void* args)
-{
-    size_t ret;
-    struct S_SQLTABLEPRIVILEGES* argp = (struct S_SQLTABLEPRIVILEGES*)args;
-
-    ret = SQLTablePrivileges(argp->hdbc, argp->cat, argp->cat_len, argp->sch,
-                             argp->sch_len, argp->tbl, argp->tbl_len);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLTABLEPRIVILEGES(SQLHDBC hdbc, SQLTCHAR* cat,
-                                           SQLSMALLINT cat_len, SQLTCHAR* sch,
-                                           SQLSMALLINT sch_len, SQLTCHAR* tbl,
-                                           SQLSMALLINT tbl_len)
-{
-    size_t ret;
-    struct S_SQLTABLEPRIVILEGES arg;
-
-    arg.hdbc = hdbc;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.tbl = tbl;
-    arg.tbl_len = tbl_len;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLTABLEPRIVILEGES, &arg,
-                                             empty_ubf, &arg);
-    return ret;
-}
-
-struct S_SQLSTATISTICS
-{
-    SQLHSTMT hdbc;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* tbl;
-    SQLSMALLINT tbl_len;
-    SQLUSMALLINT uniq;
-    SQLUSMALLINT resv;
-};
-
-static void* F_SQLSTATISTICS(void* args)
-{
-    size_t ret;
-    struct S_SQLSTATISTICS* argp = (struct S_SQLSTATISTICS*)args;
-
-    ret = SQLStatistics(argp->hdbc, argp->cat, argp->cat_len, argp->sch,
-                        argp->sch_len, argp->tbl, argp->tbl_len, argp->uniq,
-                        argp->resv);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLSTATISTICS(SQLHDBC hdbc, SQLTCHAR* cat,
-                                      SQLSMALLINT cat_len, SQLTCHAR* sch,
-                                      SQLSMALLINT sch_len, SQLTCHAR* tbl,
-                                      SQLSMALLINT tbl_len, SQLUSMALLINT uniq,
-                                      SQLUSMALLINT resv)
-{
-    size_t ret;
-    struct S_SQLSTATISTICS arg;
-
-    arg.hdbc = hdbc;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.tbl = tbl;
-    arg.tbl_len = tbl_len;
-    arg.uniq = uniq;
-    arg.resv = resv;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLSTATISTICS, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-struct S_SQLSPECIALCOLUMNS
-{
-    SQLHSTMT hdbc;
-    SQLUSMALLINT idtyp;
-    SQLTCHAR* cat;
-    SQLSMALLINT cat_len;
-    SQLTCHAR* sch;
-    SQLSMALLINT sch_len;
-    SQLTCHAR* tbl;
-    SQLSMALLINT tbl_len;
-    SQLUSMALLINT scope;
-    SQLUSMALLINT nulbl;
-};
-
-static void* F_SQLSPECIALCOLUMNS(void* args)
-{
-    size_t ret;
-    struct S_SQLSPECIALCOLUMNS* argp = (struct S_SQLSPECIALCOLUMNS*)args;
-
-    ret = SQLSpecialColumns(argp->hdbc, argp->idtyp, argp->cat, argp->cat_len,
-                            argp->sch, argp->sch_len, argp->tbl, argp->tbl_len,
-                            argp->scope, argp->nulbl);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLSPECIALCOLUMNS(SQLHDBC hdbc, SQLUSMALLINT idtyp,
-                                          SQLTCHAR* cat, SQLSMALLINT cat_len,
-                                          SQLTCHAR* sch, SQLSMALLINT sch_len,
-                                          SQLTCHAR* tbl, SQLSMALLINT tbl_len,
-                                          SQLUSMALLINT scope,
-                                          SQLUSMALLINT nulbl)
-{
-    size_t ret;
-    struct S_SQLSPECIALCOLUMNS arg;
-
-    arg.hdbc = hdbc;
-    arg.idtyp = idtyp;
-    arg.cat = cat;
-    arg.cat_len = cat_len;
-    arg.sch = sch;
-    arg.sch_len = sch_len;
-    arg.tbl = tbl;
-    arg.tbl_len = tbl_len;
-    arg.scope = scope;
-    arg.nulbl = nulbl;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLSPECIALCOLUMNS, &arg,
-                                             empty_ubf, &arg);
-    return ret;
-}
-
-struct S_SQLGETTYPEINFO
-{
-    SQLHSTMT hdbc;
-    SQLSMALLINT type;
-};
-
-static void* F_SQLGETTYPEINFO(void* args)
-{
-    size_t ret;
-    struct S_SQLGETTYPEINFO* argp = (struct S_SQLGETTYPEINFO*)args;
-
-    ret = SQLGetTypeInfo(argp->hdbc, argp->type);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLGETTYPEINFO(SQLHDBC hdbc, SQLSMALLINT type)
-{
-    size_t ret;
-    struct S_SQLGETTYPEINFO arg;
-
-    arg.hdbc = hdbc;
-    arg.type = type;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLGETTYPEINFO, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-#if (ODBCVER >= 0x0300)
-
-struct S_SQLENDTRAN
-{
-    SQLSMALLINT htype;
-    SQLHANDLE handle;
-    SQLSMALLINT op;
-};
-
-static void* F_SQLENDTRAN(void* args)
-{
-    size_t ret;
-    struct S_SQLENDTRAN* argp = (struct S_SQLENDTRAN*)args;
-
-    ret = SQLEndTran(argp->htype, argp->handle, argp->op);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLENDTRAN(SQLUSMALLINT htype, SQLHANDLE handle,
-                                   SQLUSMALLINT op)
-{
-    size_t ret;
-    struct S_SQLENDTRAN arg;
-
-    arg.htype = htype;
-    arg.handle = handle;
-    arg.op = op;
-    ret =
-        (size_t)rb_thread_call_without_gvl(F_SQLENDTRAN, &arg, empty_ubf, &arg);
-    return ret;
-}
-
-#else
-
-struct S_SQLTRANSACT
-{
-    SQLHENV henv;
-    SQLHDBC hdbc;
-    SQLSMALLINT op;
-};
-
-static void* F_SQLTRANSACT(void* args)
-{
-    size_t ret;
-    struct S_SQLTRANSACT* argp = (struct S_SQLTRANSACT*)args;
-
-    ret = SQLTransact(argp->henv, argp->hdbc, argp->op);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLTRANSACT(SQLHENV henv, SQLHDBC hdbc, SQLUSMALLINT op)
-{
-    size_t ret;
-    struct S_SQLTRANSACT arg;
-
-    arg.henv = henv;
-    arg.hdbc = hdbc;
-    arg.op = op;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLTRANCACT, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-#endif
-
-struct S_SQLEXECDIRECT
-{
-    SQLHSTMT hstmt;
-    SQLTCHAR* sql;
-    SQLINTEGER len;
-};
-
-static void* F_SQLEXECDIRECT(void* args)
-{
-    size_t ret;
-    struct S_SQLEXECDIRECT* argp = (struct S_SQLEXECDIRECT*)args;
-
-    ret = SQLExecDirect(argp->hstmt, argp->sql, argp->len);
-    return (void*)ret;
-}
-
-static void F_SQLEXECDIRECT_UBF(void* args)
-{
-    struct S_SQLEXECDIRECT* argp = (struct S_SQLEXECDIRECT*)args;
-
-    SQLCancel(argp->hstmt);
-}
-
-static inline SQLRETURN SQLEXECDIRECT(SQLHSTMT hstmt, SQLTCHAR* sql,
-                                      SQLINTEGER len)
-{
-    size_t ret;
-    struct S_SQLEXECDIRECT arg;
-
-    arg.hstmt = hstmt;
-    arg.sql = sql;
-    arg.len = len;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLEXECDIRECT, &arg,
-                                             F_SQLEXECDIRECT_UBF, &arg);
-    return ret;
-}
-
-struct S_SQLEXECUTE
-{
-    SQLHSTMT hstmt;
-};
-
-static void* F_SQLEXECUTE(void* args)
-{
-    size_t ret;
-    struct S_SQLEXECUTE* argp = (struct S_SQLEXECUTE*)args;
-
-    ret = SQLExecute(argp->hstmt);
-    return (void*)ret;
-}
-
-static void F_SQLEXECUTE_UBF(void* args)
-{
-    struct S_SQLEXECUTE* argp = (struct S_SQLEXECUTE*)args;
-
-    SQLCancel(argp->hstmt);
-}
-
-static inline SQLRETURN SQLEXECUTE(SQLHSTMT hstmt)
-{
-    size_t ret;
-    struct S_SQLEXECUTE arg;
-
-    arg.hstmt = hstmt;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLEXECUTE, &arg,
-                                             F_SQLEXECUTE_UBF, &arg);
-    return ret;
-}
-
-struct S_SQLPREPARE
-{
-    SQLHSTMT hstmt;
-    SQLTCHAR* sql;
-    SQLINTEGER len;
-};
-
-static void* F_SQLPREPARE(void* args)
-{
-    size_t ret;
-    struct S_SQLPREPARE* argp = (struct S_SQLPREPARE*)args;
-
-    ret = SQLPrepare(argp->hstmt, argp->sql, argp->len);
-    return (void*)ret;
-}
-
-static void F_SQLPREPARE_UBF(void* args)
-{
-    struct S_SQLPREPARE* argp = (struct S_SQLPREPARE*)args;
-
-    SQLCancel(argp->hstmt);
-}
-
-static inline SQLRETURN SQLPREPARE(SQLHSTMT hstmt, SQLTCHAR* sql,
-                                   SQLINTEGER len)
-{
-    size_t ret;
-    struct S_SQLPREPARE arg;
-
-    arg.hstmt = hstmt;
-    arg.sql = sql;
-    arg.len = len;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLPREPARE, &arg,
-                                             F_SQLPREPARE_UBF, &arg);
-    return ret;
-}
-
-struct S_SQLMORERESULTS
-{
-    SQLHSTMT hstmt;
-};
-
-static void* F_SQLMORERESULTS(void* args)
-{
-    size_t ret;
-    struct S_SQLMORERESULTS* argp = (struct S_SQLMORERESULTS*)args;
-
-    ret = SQLMoreResults(argp->hstmt);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLMORERESULTS(SQLHSTMT hstmt)
-{
-    size_t ret;
-    struct S_SQLMORERESULTS arg;
-
-    arg.hstmt = hstmt;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLMORERESULTS, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-struct S_SQLFETCH
-{
-    SQLHSTMT hstmt;
-};
-
-static void* F_SQLFETCH(void* args)
-{
-    size_t ret;
-    struct S_SQLFETCH* argp = (struct S_SQLFETCH*)args;
-
-    ret = SQLFetch(argp->hstmt);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLFETCH(SQLHSTMT hstmt)
-{
-    size_t ret;
-    struct S_SQLFETCH arg;
-
-    arg.hstmt = hstmt;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLFETCH, &arg, empty_ubf, &arg);
-    return ret;
-}
-
-#if (ODBCVER >= 0x0300)
-
-struct S_SQLFETCHSCROLL
-{
-    SQLHSTMT hstmt;
-    SQLSMALLINT dir;
-    SQLROWOFFSET offs;
-};
-
-static void* F_SQLFETCHSCROLL(void* args)
-{
-    size_t ret;
-    struct S_SQLFETCHSCROLL* argp = (struct S_SQLFETCHSCROLL*)args;
-
-    ret = SQLFetchScroll(argp->hstmt, argp->dir, argp->offs);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLFETCHSCROLL(SQLHSTMT hstmt, SQLSMALLINT dir,
-                                       SQLROWOFFSET offs)
-{
-    size_t ret;
-    struct S_SQLFETCHSCROLL arg;
-
-    arg.hstmt = hstmt;
-    arg.dir = dir;
-    arg.offs = offs;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLFETCHSCROLL, &arg, empty_ubf,
-                                             &arg);
-    return ret;
-}
-
-#else
-
-struct S_SQLEXTENDEDFETCH
-{
-    SQLHSTMT hstmt;
-    SQLUSMALLINT type;
-    SQLROWOFFSET row;
-    SQLROWSETSIZE* rowp;
-    SQLUSMALLINT* status
-};
-
-static void* F_SQLEXTENDEDFETCH(void* args)
-{
-    size_t ret;
-    struct S_SQLEXTENDEDFETCH* argp = (struct S_SQLEXTENDEDFETCH*)args;
-
-    ret = SQLExtendedFetch(argp->hstmt, argp->type, argp->row, argp->rowp,
-                           argp->status);
-    return (void*)ret;
-}
-
-static inline SQLRETURN SQLEXTENDEDFETCH(SQLHSTMT hstmt, SQLUSMALLINT type,
-                                         SQLROWOFFSET row, SQLROWSETSIZE* rowp,
-                                         SQLUSMALLINT* status)
-{
-    size_t ret;
-    struct S_SQLEXTENDEDFETCH arg;
-
-    arg.hstmt = hstmt;
-    arg.type = type;
-    arg.row = row;
-    arg.rowp = rowp;
-    arg.status = status;
-    ret = (size_t)rb_thread_call_without_gvl(F_SQLEXTENDEDFETCH, &arg,
-                                             empty_ubf, &arg);
-    return ret;
-}
-
-#endif
-
-#else
-
-#define SQLCONNECT SQLConnect
-#define SQLDRIVERCONNECT SQLDriverConnect
-#define SQLDISCONNECT SQLDisconnect
-#define SQLTABLES SQLTables
-#define SQLCOLUMNS SQLColumns
-#define SQLPRIMARYKEYS SQLPrimaryKeys
-#define SQLFOREIGNKEYS SQLForeignKeys
-#define SQLPROCEDURES SQLProcedures
-#define SQLPROCEDURECOLUMNS SQLProcedureColumns
-#define SQLTABLEPRIVILEGES SQLTablePrivileges
-#define SQLSTATISTICS SQLStatistics
-#define SQLSPECIALCOLUMNS SQLSpecialColumns
-#define SQLGETTYPEINFO SQLGetTypeInfo
-#if (ODBCVER >= 0x0300)
-#define SQLENDTRAN SQLEndTran
-#else
-#define SQLTRANSACT SQLTransact
-#endif
-#define SQLEXECDIRECT SQLExecDirect
-#define SQLEXECUTE SQLExecute
-#define SQLPREPARE SQLPrepare
-#define SQLMORERESULTS SQLMoreResults
-#define SQLFETCH SQLFetch
-#if (ODBCVER >= 0x0300)
-#define SQLFETCHSCROLL SQLFetchScroll
-#else
-#define SQLEXTENDEDFETCH SQLExtendedFetch
-#endif
-
-#endif
-
-/*
- *----------------------------------------------------------------------
- *
  *	UNICODE converters et.al.
  *
  *----------------------------------------------------------------------
@@ -1768,7 +867,7 @@ static void free_dbc(DBC* p)
     tracemsg(2, fprintf(stderr, "ObjFree: DBC %p\n", p););
     if (p->hdbc != SQL_NULL_HDBC)
     {
-        callsql(SQL_NULL_HENV, p->hdbc, SQL_NULL_HSTMT, SQLDISCONNECT(p->hdbc),
+        callsql(SQL_NULL_HENV, p->hdbc, SQL_NULL_HSTMT, SQLDisconnect(p->hdbc),
                 "SQLDisconnect");
         callsql(SQL_NULL_HENV, p->hdbc, SQL_NULL_HSTMT, SQLFreeConnect(p->hdbc),
                 "SQLFreeConnect");
@@ -3079,7 +2178,7 @@ static VALUE dbc_connect(int argc, VALUE* argv, VALUE self)
         rb_raise(Cerror, "%s", msg);
     }
     if (!succeeded(SQL_NULL_HENV, dbc, SQL_NULL_HSTMT,
-                   SQLCONNECT(dbc, (SQLTCHAR*)sdsn, SQL_NTS, (SQLTCHAR*)suser,
+                   SQLConnect(dbc, (SQLTCHAR*)sdsn, SQL_NTS, (SQLTCHAR*)suser,
                               (SQLSMALLINT)(suser ? SQL_NTS : 0),
                               (SQLTCHAR*)spasswd,
                               (SQLSMALLINT)(spasswd ? SQL_NTS : 0)),
@@ -3169,7 +2268,7 @@ static VALUE dbc_drvconnect(VALUE self, VALUE drv)
         rb_raise(Cerror, "%s", msg);
     }
     if (!succeeded(e->henv, dbc, SQL_NULL_HSTMT,
-                   SQLDRIVERCONNECT(dbc, NULL, (SQLTCHAR*)sdrv, SQL_NTS, NULL,
+                   SQLDriverConnect(dbc, NULL, (SQLTCHAR*)sdrv, SQL_NTS, NULL,
                                     0, NULL, SQL_DRIVER_NOPROMPT),
                    &msg, "SQLDriverConnect"))
     {
@@ -3287,7 +2386,7 @@ static VALUE dbc_disconnect(int argc, VALUE* argv, VALUE self)
     }
     if (list_empty(&p->stmts))
     {
-        callsql(SQL_NULL_HENV, p->hdbc, SQL_NULL_HSTMT, SQLDISCONNECT(p->hdbc),
+        callsql(SQL_NULL_HENV, p->hdbc, SQL_NULL_HSTMT, SQLDisconnect(p->hdbc),
                 "SQLDisconnect");
         if (!succeeded(SQL_NULL_HENV, p->hdbc, SQL_NULL_HSTMT,
                        SQLFreeConnect(p->hdbc), &msg, "SQLFreeConnect"))
@@ -4857,7 +3956,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
     {
         case INFO_TABLES:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLTABLES(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLTables(hstmt, NULL, 0, NULL, 0, swhich,
                                      (swhich == NULL) ? 0 : SQL_NTS, NULL, 0),
                            &msg, "SQLTables"))
             {
@@ -4866,7 +3965,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_COLUMNS:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLCOLUMNS(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLColumns(hstmt, NULL, 0, NULL, 0, swhich,
                                       (swhich == NULL) ? 0 : SQL_NTS, swhich2,
                                       (swhich2 == NULL) ? 0 : SQL_NTS),
                            &msg, "SQLColumns"))
@@ -4876,7 +3975,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_PRIMKEYS:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLPRIMARYKEYS(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLPrimaryKeys(hstmt, NULL, 0, NULL, 0, swhich,
                                           (swhich == NULL) ? 0 : SQL_NTS),
                            &msg, "SQLPrimaryKeys"))
             {
@@ -4885,7 +3984,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_INDEXES:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLSTATISTICS(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLStatistics(hstmt, NULL, 0, NULL, 0, swhich,
                                          (swhich == NULL) ? 0 : SQL_NTS,
                                          (SQLUSMALLINT)(RTEST(which2)
                                                             ? SQL_INDEX_UNIQUE
@@ -4898,7 +3997,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_TYPES:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLGETTYPEINFO(hstmt, (SQLSMALLINT)itype), &msg,
+                           SQLGetTypeInfo(hstmt, (SQLSMALLINT)itype), &msg,
                            "SQLGetTypeInfo"))
             {
                 goto error;
@@ -4906,7 +4005,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_FORKEYS:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLFOREIGNKEYS(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLForeignKeys(hstmt, NULL, 0, NULL, 0, swhich,
                                           (swhich == NULL) ? 0 : SQL_NTS, NULL,
                                           0, NULL, 0, swhich2,
                                           (swhich2 == NULL) ? 0 : SQL_NTS),
@@ -4917,7 +4016,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_TPRIV:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLTABLEPRIVILEGES(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLTablePrivileges(hstmt, NULL, 0, NULL, 0, swhich,
                                               (swhich == NULL) ? 0 : SQL_NTS),
                            &msg, "SQLTablePrivileges"))
             {
@@ -4926,7 +4025,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_PROCS:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLPROCEDURES(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLProcedures(hstmt, NULL, 0, NULL, 0, swhich,
                                          (swhich == NULL) ? 0 : SQL_NTS),
                            &msg, "SQLProcedures"))
             {
@@ -4935,7 +4034,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
             break;
         case INFO_PROCCOLS:
             if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                           SQLPROCEDURECOLUMNS(hstmt, NULL, 0, NULL, 0, swhich,
+                           SQLProcedureColumns(hstmt, NULL, 0, NULL, 0, swhich,
                                                (swhich == NULL) ? 0 : SQL_NTS,
                                                swhich2,
                                                (swhich2 == NULL) ? 0 : SQL_NTS),
@@ -4947,7 +4046,7 @@ static VALUE dbc_info(int argc, VALUE* argv, VALUE self, int mode)
         case INFO_SPECCOLS:
             if (!succeeded(
                     SQL_NULL_HENV, SQL_NULL_HDBC, hstmt,
-                    SQLSPECIALCOLUMNS(hstmt, (SQLUSMALLINT)iid, NULL, 0, NULL,
+                    SQLSpecialColumns(hstmt, (SQLUSMALLINT)iid, NULL, 0, NULL,
                                       0, swhich, (swhich == NULL) ? 0 : SQL_NTS,
                                       (SQLUSMALLINT)iscope, SQL_NULLABLE),
                     &msg, "SQLSpecialColumns"))
@@ -5046,7 +4145,7 @@ static VALUE dbc_trans(VALUE self, int what)
         dbc = d->hdbc;
     }
 #if (ODBCVER >= 0x0300)
-    ret = SQLENDTRAN(
+    ret = SQLEndTran(
         (SQLSMALLINT)((dbc == SQL_NULL_HDBC) ? SQL_HANDLE_ENV : SQL_HANDLE_DBC),
         (dbc == SQL_NULL_HDBC) ? e->henv : dbc, (SQLSMALLINT)what);
 #else
@@ -7577,10 +6676,10 @@ static VALUE stmt_fetch1(VALUE self, int bang)
     }
 #if (ODBCVER < 0x0300)
     msg = "SQLExtendedFetch(SQL_FETCH_NEXT)";
-    ret = SQLEXTENDEDFETCH(q->hstmt, SQL_FETCH_NEXT, 0, &nRows, rowStat);
+    ret = SQLExtendedFetch(q->hstmt, SQL_FETCH_NEXT, 0, &nRows, rowStat);
 #else
     msg = "SQLFetchScroll(SQL_FETCH_NEXT)";
-    ret = SQLFETCHSCROLL(q->hstmt, SQL_FETCH_NEXT, 0);
+    ret = SQLFetchScroll(q->hstmt, SQL_FETCH_NEXT, 0);
 #endif
     if (ret == SQL_NO_DATA)
     {
@@ -7598,7 +6697,7 @@ static VALUE stmt_fetch1(VALUE self, int bang)
         /* Fallback to SQLFetch() when others not implemented */
         msg = "SQLFetch";
         q->usef = 1;
-        ret = SQLFETCH(q->hstmt);
+        ret = SQLFetch(q->hstmt);
         if (ret == SQL_NO_DATA)
         {
             (void)tracesql(SQL_NULL_HENV, SQL_NULL_HDBC, q->hstmt, ret, msg);
@@ -7653,10 +6752,10 @@ static VALUE stmt_fetch_first1(VALUE self, int bang, int nopos)
     }
 #if (ODBCVER < 0x0300)
     msg = "SQLExtendedFetch(SQL_FETCH_FIRST)";
-    ret = SQLEXTENDEDFETCH(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat);
+    ret = SQLExtendedFetch(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat);
 #else
     msg = "SQLFetchScroll(SQL_FETCH_FIRST)";
-    ret = SQLFETCHSCROLL(q->hstmt, SQL_FETCH_FIRST, 0);
+    ret = SQLFetchScroll(q->hstmt, SQL_FETCH_FIRST, 0);
 #endif
     if (ret == SQL_NO_DATA)
     {
@@ -7707,11 +6806,11 @@ static VALUE stmt_fetch_scroll1(int argc, VALUE* argv, VALUE self, int bang)
     }
 #if (ODBCVER < 0x0300)
     sprintf(msg, "SQLExtendedFetch(%d)", idir);
-    ret = SQLEXTENDEDFETCH(q->hstmt, (SQLSMALLINT)idir, (SQLROWOFFSET)ioffs,
+    ret = SQLExtendedFetch(q->hstmt, (SQLSMALLINT)idir, (SQLROWOFFSET)ioffs,
                            &nRows, rowStat);
 #else
     sprintf(msg, "SQLFetchScroll(%d)", idir);
-    ret = SQLFETCHSCROLL(q->hstmt, (SQLSMALLINT)idir, (SQLROWOFFSET)ioffs);
+    ret = SQLFetchScroll(q->hstmt, (SQLSMALLINT)idir, (SQLROWOFFSET)ioffs);
 #endif
     if (ret == SQL_NO_DATA)
     {
@@ -7834,10 +6933,10 @@ static VALUE stmt_fetch_hash1(int argc, VALUE* argv, VALUE self, int bang)
     }
 #if (ODBCVER < 0x0300)
     msg = "SQLExtendedFetch(SQL_FETCH_NEXT)";
-    ret = SQLEXTENDEDFETCH(q->hstmt, SQL_FETCH_NEXT, 0, &nRows, rowStat);
+    ret = SQLExtendedFetch(q->hstmt, SQL_FETCH_NEXT, 0, &nRows, rowStat);
 #else
     msg = "SQLFetchScroll(SQL_FETCH_NEXT)";
-    ret = SQLFETCHSCROLL(q->hstmt, SQL_FETCH_NEXT, 0);
+    ret = SQLFetchScroll(q->hstmt, SQL_FETCH_NEXT, 0);
 #endif
     if (ret == SQL_NO_DATA)
     {
@@ -7855,7 +6954,7 @@ static VALUE stmt_fetch_hash1(int argc, VALUE* argv, VALUE self, int bang)
         /* Fallback to SQLFetch() when others not implemented */
         msg = "SQLFetch";
         q->usef = 1;
-        ret = SQLFETCH(q->hstmt);
+        ret = SQLFetch(q->hstmt);
         if (ret == SQL_NO_DATA)
         {
             (void)tracesql(SQL_NULL_HENV, SQL_NULL_HDBC, q->hstmt, ret, msg);
@@ -7912,10 +7011,10 @@ static VALUE stmt_fetch_first_hash1(int argc, VALUE* argv, VALUE self, int bang,
     }
 #if (ODBCVER < 0x0300)
     msg = "SQLExtendedFetch(SQL_FETCH_FIRST)";
-    ret = SQLEXTENDEDFETCH(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat);
+    ret = SQLExtendedFetch(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat);
 #else
     msg = "SQLFetchScroll(SQL_FETCH_FIRST)";
-    ret = SQLFETCHSCROLL(q->hstmt, SQL_FETCH_FIRST, 0);
+    ret = SQLFetchScroll(q->hstmt, SQL_FETCH_FIRST, 0);
 #endif
     if (ret == SQL_NO_DATA)
     {
@@ -7949,11 +7048,11 @@ static VALUE stmt_each(VALUE self)
 #if (ODBCVER < 0x0300)
     switch (
         callsql(SQL_NULL_HENV, SQL_NULL_HDBC, q->hstmt,
-                SQLEXTENDEDFETCH(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat),
+                SQLExtendedFetch(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat),
                 "SQLExtendedFetch(SQL_FETCH_FIRST)"))
 #else
     switch (callsql(SQL_NULL_HENV, SQL_NULL_HDBC, q->hstmt,
-                    SQLFETCHSCROLL(q->hstmt, SQL_FETCH_FIRST, 0),
+                    SQLFetchScroll(q->hstmt, SQL_FETCH_FIRST, 0),
                     "SQLFetchScroll(SQL_FETCH_FIRST)"))
 #endif
     {
@@ -8016,11 +7115,11 @@ static VALUE stmt_each_hash(int argc, VALUE* argv, VALUE self)
 #if (ODBCVER < 0x0300)
     switch (
         callsql(SQL_NULL_HENV, SQL_NULL_HDBC, q->hstmt,
-                SQLEXTENDEDFETCH(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat),
+                SQLExtendedFetch(q->hstmt, SQL_FETCH_FIRST, 0, &nRows, rowStat),
                 "SQLExtendedFetch(SQL_FETCH_FIRST)"))
 #else
     switch (callsql(SQL_NULL_HENV, SQL_NULL_HDBC, q->hstmt,
-                    SQLFETCHSCROLL(q->hstmt, SQL_FETCH_FIRST, 0),
+                    SQLFetchScroll(q->hstmt, SQL_FETCH_FIRST, 0),
                     "SQLFetchScroll(SQL_FETCH_FIRST)"))
 #endif
     {
@@ -8150,7 +7249,7 @@ static VALUE stmt_prep_int(int argc, VALUE* argv, VALUE self, int mode)
 #endif
     if ((mode & MAKERES_EXECD))
     {
-        ret = SQLEXECDIRECT(hstmt, ssql, SQL_NTS);
+        ret = SQLExecDirect(hstmt, ssql, SQL_NTS);
         if (!succeeded_nodata(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt, ret, &msg,
                               "SQLExecDirect('%s')", csql))
         {
@@ -8170,7 +7269,7 @@ static VALUE stmt_prep_int(int argc, VALUE* argv, VALUE self, int mode)
     }
     else
     {
-        ret = SQLPREPARE(hstmt, ssql, SQL_NTS);
+        ret = SQLPrepare(hstmt, ssql, SQL_NTS);
         if (!succeeded(SQL_NULL_HENV, SQL_NULL_HDBC, hstmt, ret, &msg,
                        "SQLPrepare('%s')", csql))
         {
@@ -8629,7 +7728,7 @@ static VALUE stmt_exec_int(int argc, VALUE* argv, VALUE self, int mode)
             goto error;
         }
     }
-    ret = SQLEXECUTE(q->hstmt);
+    ret = SQLExecute(q->hstmt);
     if (!succeeded_nodata(SQL_NULL_HENV, SQL_NULL_HDBC, q->hstmt, ret, &msg,
                           "SQLExecute"))
     {
