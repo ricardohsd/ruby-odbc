@@ -4,7 +4,7 @@ require "spec_helper"
 
 RSpec.describe ODBC do
   it "has a version number" do
-    expect(ODBC::VERSION).to be "0.999992"
+    expect(ODBC::VERSION).to be "0.1-dev"
   end
 
   it "has Database class" do

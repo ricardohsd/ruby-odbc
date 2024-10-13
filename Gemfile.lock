@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    ruby-odbc (0.999992)
+    ruby-odbc (0.1.pre.dev)
 
 GEM
   remote: https://rubygems.org/

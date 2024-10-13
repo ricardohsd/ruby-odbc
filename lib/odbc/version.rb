@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module ODBC
-  VERSION = "0.999992"
+  VERSION = "0.1-dev"
 end

@@ -5,7 +5,7 @@ require_relative "lib/odbc/version"
 
 Gem::Specification.new do |spec|
   spec.name = "ruby-odbc"
-  spec.version = "0.999992"
+  spec.version = ODBC::VERSION
   spec.date = Date.today.to_s
   spec.author = "Christian Werner"
   spec.email = "chw @nospam@ ch-werner.de"
