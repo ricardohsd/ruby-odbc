@@ -64,10 +64,6 @@ typedef SQLCHAR SQLTCHAR;
 #define SQLROWSETSIZE SQLULEN
 #endif
 
-#ifdef HAVE_RUBY_THREAD_H
-#include "ruby/thread.h"
-#endif
-
 /*
  * Conditionally undefine aliases of ODBC installer UNICODE functions.
  */
