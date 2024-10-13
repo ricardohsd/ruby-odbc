@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "English"
 require "spec_helper"
 require "sequel"
 
@@ -37,7 +38,7 @@ RSpec.describe "Connecting with Sequel" do
       @db.run("INSERT INTO users (id, name) VALUES (1, 'foo')")
       @db.run("INSERT INTO users (id, name) VALUES (2, 'bar')")
 
-      ODBC.trace = 2
+      # ODBC.trace = 2
       result = @db.fetch("SELECT * FROM users")
       expect(result.to_a).to eq([{ id: 1, name: "foo" }, { id: 2, name: "bar" }])
     end
@@ -47,6 +48,6 @@ RSpec.describe "Connecting with Sequel" do
     result = @db.fetch("SELECT * FROM users")
     expect(result.to_a).to eq([{ id: 1, name: "foo" }, { id: 2, name: "bar" }])
 
-    expect($?.exitstatus).to eq(0)
+    expect($CHILD_STATUS.exitstatus).to eq(0)
   end
 end

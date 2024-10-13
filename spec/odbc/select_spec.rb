@@ -5,7 +5,8 @@ require "spec_helper"
 RSpec.describe ODBC::Statement, "select queries" do
   before(:all) do
     @connection = ODBC.connect(@dsn, @uid, @pwd)
-    @connection.run("CREATE TABLE IF NOT EXISTS test_select (id INT NOT NULL, str VARCHAR(32) NOT NULL)")
+    @connection.run("DROP TABLE IF EXISTS test_select")
+    @connection.run("CREATE TABLE test_select (id INT NOT NULL, str VARCHAR(32) NOT NULL)")
     @connection.run("INSERT INTO test_select (id, str) VALUES (1, 'foo'), (2, 'bar'), (3, 'FOO'), (4, 'BAR')")
     @statement = @connection.prepare("SELECT id, str FROM test_select ORDER BY id")
     @statement.execute

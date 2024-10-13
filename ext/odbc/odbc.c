@@ -1726,13 +1726,45 @@ static void unlink_dbc(DBC* p)
     }
 }
 
+/*
+ * Frees a database connection (DBC) and its associated resources.
+ * This can will be executed in 2 cases:
+ * 1. When the database is disconnected through `conn.disconnect`
+ * 2. When the Ruby object is GC'ed
+ */
 static void free_dbc(DBC* p)
 {
     p->self = p->env = Qnil;
+
     if (!list_empty(&p->stmts))
     {
-        return;
+        tracemsg(2, fprintf(stderr,
+                            "ObjFree: DBC Dropping all active statements %p\n",
+                            p););
+
+        while (!list_empty(&p->stmts))
+        {
+            STMT* q = list_first(&p->stmts);
+
+            // stmt_drop isn't used here because it somehow cuts short
+            // the cleanup process.
+            if (q->self != Qnil && q->hstmt != SQL_NULL_HSTMT)
+            {
+                tracemsg(2,
+                         fprintf(stderr, "ObjFree: DBC Dropping statement %p\n",
+                                 q););
+                SQLFreeStmt(q->hstmt, SQL_DROP);
+                q->hstmt = SQL_NULL_HSTMT;
+                q->dbc = Qnil;
+                if (q->dbcp != NULL)
+                {
+                    list_del(&q->link);
+                    q->dbcp = NULL;
+                }
+            }
+        }
     }
+
     tracemsg(2, fprintf(stderr, "ObjFree: DBC %p\n", p););
     if (p->hdbc != SQL_NULL_HDBC)
     {
@@ -3240,6 +3272,9 @@ static VALUE dbc_disconnect(int argc, VALUE* argv, VALUE self)
     DBC* p = get_dbc(self);
     VALUE nodrop = Qfalse;
     char* msg;
+
+    // This isn't reached unless conn.disconnect is called.
+    tracemsg(2, fprintf(stderr, "DBC disconnect %p\n", p););
 
     rb_scan_args(argc, argv, "01", &nodrop);
     if (!RTEST(nodrop))
